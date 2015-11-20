@@ -28,8 +28,6 @@ typedef NS_ENUM(NSInteger, Download_status) {
 @property (nonatomic, strong)       NSNumber *status;
 @property (nonatomic, copy)         NSString *script;           //下载任务描述
 
-- (void)saveToDB;
-
 @end
 
 

@@ -11,9 +11,10 @@
 
 @implementation DownloadTaskInfoRecord
 
-- (void)saveToDB {
+- (void)setDownloadKey:(NSString *)downloadKey {
     
-    [self saveToDB:self.downloadKey];
+    _downloadKey = downloadKey;
+    self.dbKey = downloadKey;
 }
 
 @end
@@ -60,7 +61,7 @@
     
     [self.downloadTask cancel];
     self.downloadTask = nil;
-    [self.downloadTaskInfoRecord deleteFromDB:self.downloadKey];
+    [self.downloadTaskInfoRecord deleteFromDB];
     
     [Public deleteFileWithFileName:self.tmpPath];
     [Public deleteFileWithFileName:self.localPath];

@@ -10,9 +10,11 @@
 
 @interface YHActiveRecord : NSObject
 
-- (void)saveToDB:(NSString *)key;
+@property (nonatomic, copy) NSString *dbKey;   //数据库查询key
 
-- (void)deleteFromDB:(NSString *)key;
+- (void)saveToDB;
+
+- (void)deleteFromDB;
 
 + (NSArray *)records;
 

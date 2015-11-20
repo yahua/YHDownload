@@ -23,15 +23,15 @@
     return self;
 }
 
-- (void)saveToDB:(NSString *)key {
+- (void)saveToDB {
     
     NSString *objectString = [self objectToString];
-    [[RecordDBManager shareInstance] saveRecordString:objectString key:key tableName:[[self class] tableName]];
+    [[RecordDBManager shareInstance] saveRecordString:objectString key:self.dbKey tableName:[[self class] tableName]];
 }
 
-- (void)deleteFromDB:(NSString *)key {
+- (void)deleteFromDB {
     
-    [[RecordDBManager shareInstance] removeRecordStringWithKey:key tableName:[[self class] tableName]];
+    [[RecordDBManager shareInstance] removeRecordStringWithKey:self.dbKey tableName:[[self class] tableName]];
 }
 
 + (NSArray *)records {
@@ -39,14 +39,14 @@
     NSArray *activeRecord = [[RecordDBManager shareInstance] recordListWithTableName:[[self class] tableName]];
     NSMutableArray *downloadTaskInfoList = [NSMutableArray arrayWithCapacity:1];
     for (NSString *objectString in activeRecord) {
-        [downloadTaskInfoList addObject:[self getFromString:objectString]];
+        [downloadTaskInfoList addObject:[self activeRecordFromString:objectString]];
     }
     return downloadTaskInfoList;
 }
 
 #pragma mark - Private
 
-+ (id)getFromString:(NSString *)objectString {
++ (id)activeRecordFromString:(NSString *)objectString {
     
     id record = [[self class] objectFromString:objectString];
     return record;
