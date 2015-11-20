@@ -18,6 +18,12 @@
 
 @end
 
+@interface DownloadTaskInfo ()
+
+@property (nonatomic, copy)         NSString *tmpPath;          //临时存放地址
+
+@end
+
 @implementation DownloadTaskInfo
 
 #pragma mark - Public
@@ -31,9 +37,7 @@
     taskInfo.fileSize = [record.fileSize integerValue];
     taskInfo.downSize = [record.downSize integerValue];
     taskInfo.localPath = record.localPath;
-    taskInfo.script1 = record.script1;
-    taskInfo.script2 = record.script2;
-    taskInfo.resourceType = [record.resourceType integerValue];
+    taskInfo.script = record.script;
 
     return taskInfo;
 }
@@ -64,11 +68,6 @@
 
 - (BOOL)checkResouceIsDown {
     
-    if (self.resourceType == DownLoadResourceExerciseType &&
-        self.status ==Download_status_completed) {  //练习存数据库，没有文件存储
-        return YES;
-    }
-    
     if (self.status ==Download_status_completed &&
         self.fileSize == self.downSize &&
         [self.localPath length] > 0) {
@@ -88,6 +87,11 @@
     }
 }
 
+- (NSData *)resumeData {
+    
+    return [NSData dataWithContentsOfFile:self.tmpPath];
+}
+
 #pragma mark - Getter Setter
 
 - (DownloadTaskInfoRecord *)downloadTaskInfoRecord {
@@ -97,9 +101,7 @@
     _downloadTaskInfoRecord.downloadKey = self.downloadKey;
     _downloadTaskInfoRecord.url =self.url;
     _downloadTaskInfoRecord.status = @(self.status);
-    _downloadTaskInfoRecord.script1 =self.script1;
-    _downloadTaskInfoRecord.script2 =self.script2;
-    _downloadTaskInfoRecord.resourceType = @(self.resourceType);
+    _downloadTaskInfoRecord.script =self.script;
     _downloadTaskInfoRecord.fileSize = @(self.fileSize);
     _downloadTaskInfoRecord.downSize = @(self.downSize);
     _downloadTaskInfoRecord.localPath = self.localPath;

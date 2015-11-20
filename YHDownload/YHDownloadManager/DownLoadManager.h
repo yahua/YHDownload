@@ -52,24 +52,14 @@ extern NSString * const kDownloadLowStorage;        //磁盘空间不足
 
 @property (nonatomic, copy) NSString *url;
 @property (nonatomic, copy) NSString *downloadKey;
-@property (nonatomic, copy) NSString *script1;
-@property (nonatomic, copy) NSString *script2;
-@property (nonatomic, assign) DownLoadResourceType downloadType;
+@property (nonatomic, copy) NSString *script;
 
 - (instancetype)initWithDownloadKey:(NSString *)downloadKey
                                 url:(NSString *)url
-                            script1:(NSString *)script1
-                            script2:(NSString *)script2
-                       downloadType:(DownLoadResourceType)downloadType;
+                             script:(NSString *)script;
 
 - (instancetype)initWithDownloadKey:(NSString *)downloadKey
-                                url:(NSString *)url
-                            script1:(NSString *)script1
-                       downloadType:(DownLoadResourceType)downloadType;
-
-- (instancetype)initWithDownloadKey:(NSString *)downloadKey
-                                url:(NSString *)url
-                       downloadType:(DownLoadResourceType)downloadType;
+                                url:(NSString *)url;
 
 @end
 

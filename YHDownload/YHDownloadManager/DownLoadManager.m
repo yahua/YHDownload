@@ -74,9 +74,7 @@ NSString * const kDownloadLowStorage = @"kDownloadLowStorage";
     DownloadTaskInfo *taskInfo = [[DownloadTaskInfo alloc] init];
     taskInfo.downloadKey = condition.downloadKey;
     taskInfo.url = condition.url;
-    taskInfo.script1 = condition.script1;
-    taskInfo.script2 = condition.script2;
-    taskInfo.resourceType = condition.downloadType;
+    taskInfo.script = condition.script;
     [self.downloadingList addObject:taskInfo];
     [self resumeDownloadTaskWithKey:taskInfo.downloadKey];
     
@@ -254,7 +252,7 @@ NSString * const kDownloadLowStorage = @"kDownloadLowStorage";
         [self finishDownloadTask:taskInfo urlSessionTask:urlSessionTask filePath:filePath.absoluteString error:error];
     };
     
-    NSData *resumeData = [NSData dataWithContentsOfFile:taskInfo.tmpPath];
+    NSData *resumeData = [taskInfo resumeData];
     NSURLSessionDownloadTask *downloadTask = nil;
     if (resumeData) {
         downloadTask = [self.urlSessionManager downloadTaskWithResumeData:resumeData
@@ -347,10 +345,6 @@ NSString * const kDownloadLowStorage = @"kDownloadLowStorage";
 
 - (void)downloadingTask:(DownloadTaskInfo *)taskInfo totalBytesExpectedToWrite:(int64_t)totalBytesExpectedToWrite totalBytesWritten:(int64_t)totalBytesWritten {
     
-    //暂时处理
-    if (taskInfo.resourceType == DownLoadResourceVideoDocumentType) { //二分屏下载， 包含图片
-        totalBytesExpectedToWrite += totalBytesExpectedToWrite*0.05; //(图片大小为视频大小的5%)
-    }
     taskInfo.fileSize = totalBytesExpectedToWrite;
     taskInfo.downSize = totalBytesWritten;
     
@@ -404,33 +398,21 @@ NSString * const kDownloadLowStorage = @"kDownloadLowStorage";
 
 - (instancetype)initWithDownloadKey:(NSString *)downloadKey
                                 url:(NSString *)url
-                            script1:(NSString *)script1
-                            script2:(NSString *)script2
-                       downloadType:(DownLoadResourceType)downloadType {
+                            script:(NSString *)script {
     
     self = [super init];
     if (self) {
         _downloadKey = downloadKey;
         _url = url;
-        _script1 = script1;
-        _script2 = script2;
-        _downloadType = downloadType;
+        _script = script;
     }
     return self;
 }
 
 - (instancetype)initWithDownloadKey:(NSString *)downloadKey
-                                url:(NSString *)url
-                            script1:(NSString *)script1
-                       downloadType:(DownLoadResourceType)downloadType {
-    return [self initWithDownloadKey:downloadKey url:url script1:script1 script2:nil downloadType:downloadType];
-}
-
-- (instancetype)initWithDownloadKey:(NSString *)downloadKey
-                                url:(NSString *)url
-                       downloadType:(DownLoadResourceType)downloadType {
+                                url:(NSString *)url{
     
-    return [self initWithDownloadKey:downloadKey url:url script1:nil script2:nil downloadType:downloadType];
+    return [self initWithDownloadKey:downloadKey url:url script:nil];
 }
 
 @end

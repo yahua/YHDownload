@@ -200,11 +200,7 @@ NSURLSessionDownloadDelegate>
     
     [self.session getTasksWithCompletionHandler:^(NSArray *dataTasks, NSArray *uploadTasks, NSArray *downloadTasks) {
         
-        //后台
         for (NSURLSessionDownloadTask *downloadTask in downloadTasks) {
-            
-            //外面创建下载任务
-            //[[NSNotificatiognCenter defaultCenter] postNotificationName:YHNetworkingTaskResumeSession object:nil userInfo:@{YHNetworkingTaskResumeDownloadTask: downloadTask}];
             [self addDelegateForDownloadTask:downloadTask progress:nil destination:nil completionHandler:nil];
         }
     }];

@@ -72,7 +72,7 @@ didFinishDownloadingToURL:(NSURL *)location
             [[NSFileManager defaultManager] moveItemAtURL:location toURL:self.downloadFilePath error:&fileManagerError];
             if (fileManagerError) {
                 //文件存储失败
-                //[[NSNotificationCenter defaultCenter] postNotificationName:AFURLSessionDownloadTaskDidFailToMoveFileNotification object:downloadTask userInfo:fileManagerError.userInfo];
+                NSLog(@"文件移动失败");
             }
         }
     }

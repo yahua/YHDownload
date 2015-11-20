@@ -18,7 +18,7 @@ typedef void (^YHURLSessionTaskCompletionHandler)(NSURLSessionTask *urlSessionTa
 
 @property (nonatomic, strong) NSProgress *progress;
 @property (nonatomic, copy)   NSURL *downloadFilePath;
-@property (nonatomic, copy)   NSURL *tmpFilePath;    //URLSession的临时路径
+@property (nonatomic, copy)   NSURL *tmpFilePath;    //下载完成后的filepath
 @property (nonatomic, copy)   YHURLSessionDownloadTaskDidFinishDownloadingBlock downloadTaskDidFinishDownloading;
 @property (nonatomic, copy)   YHURLSessionTaskLoadingBlock downloadTaskLoading;
 @property (nonatomic, copy)   YHURLSessionTaskCompletionHandler completionHandler;
