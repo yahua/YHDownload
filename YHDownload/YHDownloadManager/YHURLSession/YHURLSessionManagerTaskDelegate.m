@@ -82,8 +82,7 @@ didFinishDownloadingToURL:(NSURL *)location
       downloadTask:(__unused NSURLSessionDownloadTask *)downloadTask
       didWriteData:(__unused int64_t)bytesWritten
  totalBytesWritten:(int64_t)totalBytesWritten
-totalBytesExpectedToWrite:(int64_t)totalBytesExpectedToWrite
-{
+totalBytesExpectedToWrite:(int64_t)totalBytesExpectedToWrite {
 
     self.progress.totalUnitCount = totalBytesExpectedToWrite;
     self.progress.completedUnitCount = totalBytesWritten;
