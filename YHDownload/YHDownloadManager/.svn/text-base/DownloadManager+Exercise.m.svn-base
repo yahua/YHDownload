@@ -1,0 +1,116 @@
+//
+//  DownloadManage+Exercise.m
+//  YCZZ
+//
+//  Created by wangshiwen on 15/9/8.
+//  Copyright (c) 2015年 com.nd.hy. All rights reserved.
+//
+
+#import "DownloadManager+Exercise.h"
+#import "DownLoadManager+User.h"
+#import "DownloadExerciseManage.h"
+
+@implementation DownLoadManager (Exercise)
+
+- (void)addDownloadExerciseTaskWithCondition:(DownloadCondition *)condition {
+    
+    condition.downloadKey = [self downloadKeyWithOriginKey:condition.downloadKey];
+    BOOL isSucc = NO;
+    //查找数据是否已添加
+    for (DownloadTaskInfo *tmpInfo in self.downloadingList) {
+        if ([tmpInfo.downloadKey isEqualToString:condition.downloadKey]) {
+            isSucc = YES;
+            break;
+        }
+    }
+    if (!isSucc) {
+        for (DownloadTaskInfo *tmpInfo in self.finishList) {
+            if ([tmpInfo.downloadKey isEqualToString:condition.downloadKey]) {
+                isSucc = YES;
+                break;
+            }
+        }
+    }
+    
+    if (!isSucc) {
+
+        DownloadTaskInfo *taskInfo = [[DownloadTaskInfo alloc] init];
+        taskInfo.downloadKey = condition.downloadKey;
+        taskInfo.url = [condition.urls objectAtIndex:0];
+        taskInfo.script1 = condition.script1;
+        taskInfo.script2 = condition.script2;
+        taskInfo.resourceType = condition.downloadType;
+        taskInfo.status = Download_status_downloading;
+        [self.downloadingList addObject:taskInfo];
+        
+        [taskInfo.downloadTaskInfoRecord saveToDB];
+        
+        [[NSNotificationCenter defaultCenter] postNotificationName:kDownloadingCountChange object:nil userInfo:nil];
+        
+        [[DownloadExerciseManage shareInstance] addDownloadExerciseWithChapterID:[self originKeyWithDownloadKey:condition.downloadKey]];
+    }
+}
+
+- (void)pauseDownloadExerciseTaskWithKey:(NSString *)key {
+    
+    DownloadTaskInfo *exerciseInfo = [self downloadTaskInfoWithKey_User:key];
+    if (exerciseInfo.status != Download_status_downloading && exerciseInfo.status != Download_status_waiting) {
+        return;
+    }
+    
+    exerciseInfo.status = Download_status_pause;
+    [exerciseInfo.downloadTaskInfoRecord saveToDB];
+    
+    [[DownloadExerciseManage shareInstance] pauseDownloadExerciseWithChapterID:[self originKeyWithDownloadKey:key]];
+}
+
+- (void)resumeDownloadExerciseTaskWithKey:(NSString *)key {
+    
+    DownloadTaskInfo *exerciseInfo = [self downloadTaskInfoWithKey_User:key];
+    if (exerciseInfo.status == Download_status_completed) {
+        return;
+    }
+    
+    exerciseInfo.status = Download_status_downloading;
+    [exerciseInfo.downloadTaskInfoRecord saveToDB];
+    
+    [[DownloadExerciseManage shareInstance] addDownloadExerciseWithChapterID:[self originKeyWithDownloadKey:key]];
+}
+
+- (void)deleteDownloadExerciseTaskWithKey:(NSString *)key {
+    
+    [self deleteDownloadTaskWithKey:key];
+    //数据库是否需要删除？？
+}
+
+- (void)finishExerciseTaskWithKey:(NSString *)key fileSize:(NSUInteger)fileSize {
+    
+    DownloadTaskInfo *exerciseInfo = [self downloadTaskInfoWithKey_User:key];
+    exerciseInfo.fileSize = fileSize;
+    exerciseInfo.downSize = exerciseInfo.fileSize;
+    exerciseInfo.status = Download_status_completed;
+    [exerciseInfo.downloadTaskInfoRecord saveToDB];
+    
+    //从下载列表中删除
+    for (DownloadTaskInfo *downInfo in self.downloadingList) {
+        if(downInfo == exerciseInfo) {
+            [self.downloadingList removeObject:downInfo];
+            break;
+        }
+    }
+    //增加到下载完成列表
+    [self.finishList addObject:exerciseInfo];
+    
+    [[NSNotificationCenter defaultCenter] postNotificationName:kDownloadingCountChange object:nil userInfo:nil];
+}
+
+- (void)failureExerciseTaskWithKey:(NSString *)key {
+    
+    DownloadTaskInfo *exerciseInfo = [self downloadTaskInfoWithKey_User:key];
+    exerciseInfo.status = Download_status_Error;
+    [exerciseInfo.downloadTaskInfoRecord saveToDB];
+}
+
+
+
+@end
