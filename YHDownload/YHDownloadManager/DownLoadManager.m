@@ -16,6 +16,7 @@
 
 NSString * const kDownloadAdd = @"kDownloadAdd";
 NSString * const kDownloadDelete = @"kDownloadDelete";
+NSString * const kDownloading = @"kDownloading";
 NSString * const kDownloadComplete = @"kDownloadComplete";
 NSString * const kDownloadFail = @"kDownloadFail";
 NSString * const kDownloadLowStorage = @"kDownloadLowStorage";
