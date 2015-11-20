@@ -347,7 +347,7 @@ NSString * const kDownloadLowStorage = @"kDownloadLowStorage";
     
     taskInfo.fileSize = totalBytesExpectedToWrite;
     taskInfo.downSize = totalBytesWritten;
-    
+    NSLog(@"Progress:%lf", totalBytesWritten*1.0/totalBytesExpectedToWrite);
     if(![self freeDiskSpace])
     {
         UIAlertView *alertView = [[UIAlertView alloc] initWithTitle:@"温馨提示" message:@"磁盘空间不足，下载失败！" delegate:nil cancelButtonTitle:@"确认" otherButtonTitles:nil, nil];

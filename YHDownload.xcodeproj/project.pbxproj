@@ -7,6 +7,12 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		191A5D4B1BFF3316002FDEE7 /* DownLoadingCell.m in Sources */ = {isa = PBXBuildFile; fileRef = 191A5D4A1BFF3316002FDEE7 /* DownLoadingCell.m */; };
+		191A5D531BFF36CF002FDEE7 /* icon_download_continue@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 191A5D4F1BFF36CF002FDEE7 /* icon_download_continue@2x.png */; };
+		191A5D541BFF36CF002FDEE7 /* icon_download_pause@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 191A5D501BFF36CF002FDEE7 /* icon_download_pause@2x.png */; };
+		191A5D551BFF36CF002FDEE7 /* icon_download_resume@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 191A5D511BFF36CF002FDEE7 /* icon_download_resume@2x.png */; };
+		191A5D561BFF36CF002FDEE7 /* icon_download_wait@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 191A5D521BFF36CF002FDEE7 /* icon_download_wait@2x.png */; };
+		191A5D591BFF38AC002FDEE7 /* UIView+MethodExt.m in Sources */ = {isa = PBXBuildFile; fileRef = 191A5D581BFF38AC002FDEE7 /* UIView+MethodExt.m */; };
 		19468AE01BFDA9EA0056D5D1 /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = 19468ADF1BFDA9EA0056D5D1 /* main.m */; };
 		19468AE31BFDA9EA0056D5D1 /* AppDelegate.m in Sources */ = {isa = PBXBuildFile; fileRef = 19468AE21BFDA9EA0056D5D1 /* AppDelegate.m */; };
 		19468AE61BFDA9EA0056D5D1 /* ViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 19468AE51BFDA9EA0056D5D1 /* ViewController.m */; };
@@ -54,6 +60,14 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		191A5D491BFF3316002FDEE7 /* DownLoadingCell.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DownLoadingCell.h; sourceTree = "<group>"; };
+		191A5D4A1BFF3316002FDEE7 /* DownLoadingCell.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = DownLoadingCell.m; sourceTree = "<group>"; };
+		191A5D4F1BFF36CF002FDEE7 /* icon_download_continue@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "icon_download_continue@2x.png"; sourceTree = "<group>"; };
+		191A5D501BFF36CF002FDEE7 /* icon_download_pause@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "icon_download_pause@2x.png"; sourceTree = "<group>"; };
+		191A5D511BFF36CF002FDEE7 /* icon_download_resume@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "icon_download_resume@2x.png"; sourceTree = "<group>"; };
+		191A5D521BFF36CF002FDEE7 /* icon_download_wait@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "icon_download_wait@2x.png"; sourceTree = "<group>"; };
+		191A5D571BFF38AC002FDEE7 /* UIView+MethodExt.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "UIView+MethodExt.h"; sourceTree = "<group>"; };
+		191A5D581BFF38AC002FDEE7 /* UIView+MethodExt.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = "UIView+MethodExt.m"; sourceTree = "<group>"; };
 		19468ADB1BFDA9EA0056D5D1 /* YHDownload.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = YHDownload.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		19468ADF1BFDA9EA0056D5D1 /* main.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = main.m; sourceTree = "<group>"; };
 		19468AE11BFDA9EA0056D5D1 /* AppDelegate.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AppDelegate.h; sourceTree = "<group>"; };
@@ -160,11 +174,19 @@
 		19468ADD1BFDA9EA0056D5D1 /* YHDownload */ = {
 			isa = PBXGroup;
 			children = (
+				191A5D4F1BFF36CF002FDEE7 /* icon_download_continue@2x.png */,
+				191A5D501BFF36CF002FDEE7 /* icon_download_pause@2x.png */,
+				191A5D511BFF36CF002FDEE7 /* icon_download_resume@2x.png */,
+				191A5D521BFF36CF002FDEE7 /* icon_download_wait@2x.png */,
 				19468B111BFDAA0B0056D5D1 /* YHDownloadManager */,
 				19468AE11BFDA9EA0056D5D1 /* AppDelegate.h */,
 				19468AE21BFDA9EA0056D5D1 /* AppDelegate.m */,
 				19468AE41BFDA9EA0056D5D1 /* ViewController.h */,
 				19468AE51BFDA9EA0056D5D1 /* ViewController.m */,
+				191A5D491BFF3316002FDEE7 /* DownLoadingCell.h */,
+				191A5D4A1BFF3316002FDEE7 /* DownLoadingCell.m */,
+				191A5D571BFF38AC002FDEE7 /* UIView+MethodExt.h */,
+				191A5D581BFF38AC002FDEE7 /* UIView+MethodExt.m */,
 				19468AE71BFDA9EA0056D5D1 /* Main.storyboard */,
 				19468AEA1BFDA9EB0056D5D1 /* Assets.xcassets */,
 				19468AEC1BFDA9EB0056D5D1 /* LaunchScreen.storyboard */,
@@ -388,8 +410,12 @@
 			buildActionMask = 2147483647;
 			files = (
 				19468AEE1BFDA9EB0056D5D1 /* LaunchScreen.storyboard in Resources */,
+				191A5D541BFF36CF002FDEE7 /* icon_download_pause@2x.png in Resources */,
 				19468AEB1BFDA9EB0056D5D1 /* Assets.xcassets in Resources */,
+				191A5D531BFF36CF002FDEE7 /* icon_download_continue@2x.png in Resources */,
+				191A5D551BFF36CF002FDEE7 /* icon_download_resume@2x.png in Resources */,
 				19468AE91BFDA9EA0056D5D1 /* Main.storyboard in Resources */,
+				191A5D561BFF36CF002FDEE7 /* icon_download_wait@2x.png in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -416,7 +442,9 @@
 			files = (
 				19468AE61BFDA9EA0056D5D1 /* ViewController.m in Sources */,
 				19468AE31BFDA9EA0056D5D1 /* AppDelegate.m in Sources */,
+				191A5D4B1BFF3316002FDEE7 /* DownLoadingCell.m in Sources */,
 				19468B4B1BFDAA4F0056D5D1 /* FMDatabase.m in Sources */,
+				191A5D591BFF38AC002FDEE7 /* UIView+MethodExt.m in Sources */,
 				19468B3F1BFDAA0B0056D5D1 /* YHURLSessionManager.m in Sources */,
 				19468B381BFDAA0B0056D5D1 /* YHActiveRecord.m in Sources */,
 				19468B401BFDAA0B0056D5D1 /* YHURLSessionManagerTaskDelegate.m in Sources */,
@@ -660,6 +688,7 @@
 				19468B0A1BFDA9EB0056D5D1 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
 		};
 		19468B0B1BFDA9EB0056D5D1 /* Build configuration list for PBXNativeTarget "YHDownloadTests" */ = {
 			isa = XCConfigurationList;
@@ -668,6 +697,7 @@
 				19468B0D1BFDA9EB0056D5D1 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
 		};
 		19468B0E1BFDA9EB0056D5D1 /* Build configuration list for PBXNativeTarget "YHDownloadUITests" */ = {
 			isa = XCConfigurationList;
@@ -676,6 +706,7 @@
 				19468B101BFDA9EB0056D5D1 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
 	};

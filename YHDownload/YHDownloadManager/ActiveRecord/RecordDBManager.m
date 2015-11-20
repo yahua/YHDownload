@@ -3,7 +3,7 @@
 //  YCZZ
 //
 //  Created by wangshiwen on 15/8/31.
-//  Copyright (c) 2015年 com.nd.hy. All rights reserved.
+//  Copyright (c) 2015年 . All rights reserved.
 //
 
 #import "RecordDBManager.h"

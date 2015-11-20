@@ -3,7 +3,7 @@
 //  YCZZ
 //
 //  Created by wsw on 15/11/10.
-//  Copyright © 2015年 com.nd.hy. All rights reserved.
+//  Copyright © 2015年 . All rights reserved.
 //
 
 #import "YHNetworkActivityIndicatorManager.h"
