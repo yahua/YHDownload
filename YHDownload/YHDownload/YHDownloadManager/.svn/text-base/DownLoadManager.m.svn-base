@@ -1,0 +1,603 @@
+//
+//  DownLoadManager.m
+//  Download
+//
+//  Created by 王时温 on 10/20/15.
+//  Copyright © 2015 王时温. All rights reserved.
+//
+
+#import "DownLoadManager.h"
+#import "YHURLSessionManager.h"
+#import "YHNetworkActivityIndicatorManager.h"
+
+#define MaxConcurrentOperationCount  3
+
+NSString * const kDownloadingCountChange = @"kDownloadingCountChange";
+
+@interface DownLoadManager ()
+
+@property (nonatomic, strong) YHURLSessionManager *urlSessionManager;
+
+@property (nonatomic, strong) NSMutableArray *finishList;
+@property (nonatomic, strong) NSMutableArray *downloadingList;
+@property (nonatomic, strong) NSMutableArray *curDownloadList;
+
+@end
+
+@implementation DownLoadManager
+
++ (instancetype)shareInstance {
+    
+    static DownLoadManager *downloadManager;
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        downloadManager = [DownLoadManager new];
+    });
+    return downloadManager;
+}
+
+- (instancetype)init
+{
+    self = [super init];
+    if (self) {
+        
+        [YHNetworkActivityIndicatorManager sharedManager].enabled = YES;
+        
+        _urlSessionManager = [[YHURLSessionManager alloc] init];
+        _finishList = [NSMutableArray arrayWithCapacity:1];
+        _downloadingList = [NSMutableArray arrayWithCapacity:1];
+        _curDownloadList = [NSMutableArray arrayWithCapacity:MaxConcurrentOperationCount];
+        _downloadingImageDic = [NSMutableDictionary dictionary];
+        _finishImageDic = [NSMutableDictionary dictionary];
+        _maxDownloadTaskCount = MaxConcurrentOperationCount;
+        
+        [self loadDataFromDB];
+        
+        [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(urlSessionManagerNotification:) name:YHNetworkingTaskDidCompleteWithoutBlockNotification object:nil];
+    }
+    return self;
+}
+
+#pragma mark - Public
+
+- (void)addDownloadTaskWithCondition:(DownloadCondition *)condition {
+    
+    //查找数据是否已添加
+    if ([self downloadTaskInfoInDownloadingListWithDownloadKey:condition.downloadKey] ||
+        [self downloadTaskInfoInFinishListWithDownloadKey:condition.downloadKey]) {
+        return;
+    }
+    
+    //原来的下载列表中没有
+    DownloadTaskInfo *taskInfo = [[DownloadTaskInfo alloc] init];
+    taskInfo.downloadKey = condition.downloadKey;
+    taskInfo.url = [condition.urls objectAtIndex:0];
+    taskInfo.script1 = condition.script1;
+    taskInfo.script2 = condition.script2;
+    taskInfo.resourceType = condition.downloadType;
+    [self.downloadingList addObject:taskInfo];
+    
+    [self resumeDownloadTaskWithKey:taskInfo.downloadKey];
+    
+    [[NSNotificationCenter defaultCenter] postNotificationName:kDownloadingCountChange object:nil userInfo:nil];
+    
+    NSDictionary *userInfo = [NSDictionary dictionaryWithObjectsAndKeys:DownloadMsg_downloadAdd, MsgCenter_Key, taskInfo ,DownloadMsg_downloadInfo, nil];
+    [[NSNotificationCenter defaultCenter] postNotificationName:Download_msgCenter object:nil userInfo:userInfo];
+    
+}
+
+- (void)addGroupMemberDownloadTaskWithCondition:(DownloadCondition *)condition parentKey:(NSString *)parentKey {
+    
+    DownloadTaskInfo *taskInfo = [[DownloadTaskInfo alloc] init];
+    taskInfo.downloadKey = condition.downloadKey;
+    taskInfo.url = [condition.urls objectAtIndex:0];
+    taskInfo.script1 = condition.script1;
+    taskInfo.script2 = condition.script2;
+    taskInfo.resourceType = condition.downloadType;
+    taskInfo.status = Download_status_pause;
+    [taskInfo.downloadTaskInfoRecord saveToDB];
+   
+    NSString *key = parentKey;
+    NSMutableArray *imageArray = [self.downloadingImageDic objectForKey:key];
+    if (!imageArray) {
+        imageArray = [NSMutableArray array];
+        [self.downloadingImageDic setObject:imageArray forKey:key];
+    }
+    [imageArray addObject:taskInfo];
+}
+
+- (void)pauseDownloadTaskWithKey:(NSString *)downloadKey {
+    
+    DownloadTaskInfo *pasuseTaskInfo = [self downloadTaskInfoInDownloadingListWithDownloadKey:downloadKey];
+    if (!pasuseTaskInfo) {
+        return;
+    }
+    if (pasuseTaskInfo.status == Download_status_downloading) {
+        [pasuseTaskInfo.downloadTask cancelByProducingResumeData:^(NSData * resumeData) {
+            [pasuseTaskInfo saveResumeData:resumeData];
+        }];
+    }
+    
+    pasuseTaskInfo.status = Download_status_pause;
+    
+    [self completeOneDownloadTask:pasuseTaskInfo];
+}
+
+- (void)resumeDownloadTaskWithKey:(NSString *)downloadKey {
+    
+    DownloadTaskInfo *taskInfo = [self downloadTaskInfoInDownloadingListWithDownloadKey:downloadKey];
+    if (!taskInfo) {
+        return;
+    }
+    if (self.curDownloadList.count < self.maxDownloadTaskCount) {
+        [self.curDownloadList addObject:taskInfo];
+        taskInfo.status =Download_status_downloading;
+        if (taskInfo.resourceType != DownLoadResourceVideoDocumentType) {
+            [self createDownloadTaskWithTaskInfo:taskInfo];
+        }else if (![taskInfo hasDownloadVideo]) {
+            [self createDownloadTaskWithTaskInfo:taskInfo];
+        }
+    }else {
+        taskInfo.status = Download_status_waiting;
+    }
+    [taskInfo.downloadTaskInfoRecord saveToDB];
+}
+
+- (void)deleteDownloadTaskWithKey:(NSString *)downloadKey {
+    
+    DownloadTaskInfo *taskInfo = [self downloadTaskInfoInDownloadingListWithDownloadKey:downloadKey];
+    if (taskInfo) {
+        
+        [self.downloadingList removeObject:taskInfo];
+        [self completeOneDownloadTask:taskInfo];
+    }else {
+        taskInfo = [self downloadTaskInfoInFinishListWithDownloadKey:downloadKey];
+        if (!taskInfo) {
+            return;
+        }
+        [self.finishList removeObject:taskInfo];
+    }
+    [taskInfo deleteResourceDownInfo];
+    
+    [self startWaitDownloadTask];
+    
+    [[NSNotificationCenter defaultCenter] postNotificationName:kDownloadingCountChange object:nil userInfo:nil];
+    
+    NSDictionary *userInfo = [NSDictionary dictionaryWithObjectsAndKeys:DownloadMsg_downloadAdd, MsgCenter_Key, nil];
+    [[NSNotificationCenter defaultCenter] postNotificationName:Download_msgCenter object:nil userInfo:userInfo];
+}
+
+- (void)pauseAllDownloadTask {
+    
+    for (DownloadTaskInfo *taskInfo in self.downloadingList) {
+        [self pauseDownloadTaskWithKey:taskInfo.downloadKey];
+    }
+}
+
+- (void)resumeAllDownloadTask {
+    
+    for (DownloadTaskInfo *taskInfo in self.downloadingList) {
+        [self resumeDownloadTaskWithKey:taskInfo.downloadKey];
+    }
+}
+
+- (DownloadTaskInfo *)downloadTaskInfoWithKey:(NSString *)downloadKey {
+    
+    DownloadTaskInfo *taskInfo = nil;
+    taskInfo = [self downloadTaskInfoInFinishListWithDownloadKey:downloadKey];
+    if (taskInfo) {
+        return taskInfo;
+    }
+    taskInfo = [self downloadTaskInfoInDownloadingListWithDownloadKey:downloadKey];
+    return taskInfo;
+}
+
+- (void)setDefaultMaxDownloadCount {
+    
+    self.maxDownloadTaskCount = MaxConcurrentOperationCount;
+}
+
+- (void)createDownloadTaskWithTaskInfo:(DownloadTaskInfo *)taskInfo {
+    
+    NSData *resumeData = [NSData dataWithContentsOfFile:taskInfo.tmpPath];
+    NSURLSessionDownloadTask *downloadTask = nil;
+    if (resumeData) {
+        downloadTask = [self.urlSessionManager downloadTaskWithResumeData:resumeData progress:^(int64_t totalBytesWritten, int64_t totalBytesExpectedToWrite, double progress) {
+            
+            [self downloadingTask:taskInfo totalBytesExpectedToWrite:totalBytesExpectedToWrite totalBytesWritten:totalBytesWritten];
+        } destination:^NSURL *(NSURL *targetPath, NSURLResponse *response) {
+            
+            return [taskInfo downloadFilePath];
+        } completionHandler:^(NSURLSessionTask *urlSessionTask, NSURL *filePath, NSError *error) {
+            
+            [self finishDownloadTask:taskInfo urlSessionTask:urlSessionTask filePath:filePath.absoluteString error:error];
+        }];
+    }else {
+        NSURLRequest *request = [NSURLRequest requestWithURL:[NSURL URLWithString:taskInfo.url]];
+        downloadTask = [self.urlSessionManager downloadTaskWithRequest:request
+                                                              progress:^(int64_t totalBytesWritten, int64_t totalBytesExpectedToWrite, double progress) {
+                                                                  
+                                                                  [self downloadingTask:taskInfo totalBytesExpectedToWrite:totalBytesExpectedToWrite totalBytesWritten:totalBytesWritten];
+                                                              }
+                                                           destination:^NSURL * (NSURL *  targetPath, NSURLResponse * response) {
+                                                               //文件存储路径
+                                                               return [taskInfo downloadFilePath];
+                                                           } completionHandler:^(NSURLSessionTask *  urlSessionTask, NSURL * filePath, NSError * error) {
+                                                               
+                                                               [self finishDownloadTask:taskInfo urlSessionTask:urlSessionTask filePath:filePath.absoluteString error:error];
+                                                           }];
+    }
+    if (!downloadTask) {
+        return;
+    }
+    downloadTask.taskDescription = taskInfo.downloadKey;
+    taskInfo.downloadTask = downloadTask;
+}
+
+#pragma mark - Setter
+
+- (void)setMaxDownloadTaskCount:(NSInteger)maxDownloadTaskCount {
+    
+    _maxDownloadTaskCount = maxDownloadTaskCount;
+    if (_maxDownloadTaskCount == 1) {
+        for (DownloadTaskInfo *downInfo in self.curDownloadList) {
+            [downInfo.downloadTask suspend];
+            downInfo.status = Download_status_waiting;
+            //更新下载数据
+            [downInfo.downloadTaskInfoRecord saveToDB];
+        }
+        [self.curDownloadList removeAllObjects];
+    }else if (_maxDownloadTaskCount == maxDownloadTaskCount){
+        [self startWaitDownloadTask];
+    }
+}
+
+#pragma mark - NSNotification
+
+- (void)urlSessionManagerNotification:(NSNotification *)notification {
+    
+   if ([notification.name isEqualToString:YHNetworkingTaskDidCompleteWithoutBlockNotification]) {
+        
+        NSURLSessionDownloadTask *downloadTask = notification.object;
+        if (!downloadTask) {
+            return;
+        }
+        
+        DownloadTaskInfo *taskInfo = [self downloadTaskInfoWithKey:downloadTask.taskDescription];
+        if (!taskInfo) {
+            return;
+        }
+        if (downloadTask.response) {  //上次正在下载的或者暂停的任务 第一次重启才会有值
+            taskInfo.fileSize = downloadTask.countOfBytesExpectedToReceive;
+            taskInfo.downSize = downloadTask.countOfBytesReceived;
+        }
+        NSError *error = [notification.userInfo objectForKey:YHNetworkingTaskDidCompleteErrorKey];
+        if (error) {  //网络请求失败或者后台下载被强制关闭，将下载状态设为失败
+           
+            NSData *resumeData = [error.userInfo objectForKey:NSURLSessionDownloadTaskResumeData];
+            if (resumeData) {
+                [taskInfo saveResumeData:resumeData];
+            }
+        }else {  //下载成功
+            
+            taskInfo.status = Download_status_completed;
+            NSURL *tmpUrl = [notification.userInfo objectForKey:YHNetworkingTaskDidCompleteTmpFileKey];
+            NSURL *localPath = [taskInfo downloadFilePath];
+            NSError *fileManagerError = nil;
+            [[NSFileManager defaultManager] moveItemAtURL:tmpUrl toURL:localPath error:&fileManagerError];
+            if (fileManagerError) {
+                NSLog(@"下载文件拷贝失败");
+            }
+            taskInfo.localPath = localPath.absoluteString;
+            
+            [self.downloadingList removeObject:taskInfo];
+            [self.finishList addObject:taskInfo];
+        }
+        [taskInfo.downloadTaskInfoRecord saveToDB];
+    }
+}
+
+#pragma mark - Private
+
+- (void)loadDataFromDB {
+    
+    NSArray *taskInfoRecordList = [DownloadTaskInfoRecord records];
+    for (DownloadTaskInfoRecord *record in taskInfoRecordList) {
+        
+        DownloadTaskInfo *taskInfo = [DownloadTaskInfo infoWithRecord:record];
+        if (taskInfo.status ==Download_status_completed) {
+            if (![taskInfo checkResouceIsDown]) {
+                taskInfo.downSize = 0;
+                taskInfo.status =Download_status_Error;
+            }
+        }
+        if (taskInfo.status ==Download_status_completed) {
+
+            if (taskInfo.resourceType == DownLoadResourceImageType) {
+                NSString *key = taskInfo.script1;
+                NSMutableArray *imageArray = [self.finishImageDic objectForKey:key];
+                if (!imageArray) {
+                    imageArray = [NSMutableArray array];
+                    [self.finishImageDic setObject:imageArray forKey:key];
+                }
+                [imageArray addObject:taskInfo];
+            }else {
+                [self.finishList addObject:taskInfo];
+            }
+        }else{
+            if (taskInfo.resourceType == DownLoadResourceImageType) {
+                NSString *key = taskInfo.script1;
+                NSMutableArray *imageArray = [self.downloadingImageDic objectForKey:key];
+                if (!imageArray) {
+                    imageArray = [NSMutableArray array];
+                    [self.downloadingImageDic setObject:imageArray forKey:key];
+                }
+                [imageArray addObject:taskInfo];
+            }else {
+                [self.downloadingList addObject:taskInfo];
+                taskInfo.status = Download_status_pause;
+            }
+        }
+        [[taskInfo downloadTaskInfoRecord] saveToDB];
+    }
+}
+
+- (DownloadTaskInfo *)downloadTaskInfoInDownloadingListWithDownloadKey:(NSString *)downloadKey {
+    
+    for (DownloadTaskInfo *taskInfo in self.downloadingList) {
+        
+        if ([taskInfo.downloadKey isEqualToString:downloadKey]) {
+            return taskInfo;
+        }
+    }
+
+    return nil;
+}
+
+- (DownloadTaskInfo *)downloadTaskInfoInFinishListWithDownloadKey:(NSString *)downloadKey {
+    
+    for (DownloadTaskInfo *taskInfo in self.finishList) {
+        
+        if ([taskInfo.downloadKey isEqualToString:downloadKey]) {
+            return taskInfo;
+        }
+    }
+    return nil;
+}
+
+- (void)cleanDownloadDocumentBlock {
+    
+    self.sucessDocumentBlock = nil;
+    self.failureDocumentBlock = nil;
+    self.lastDownloadDocumentKey = nil;
+    self.maxDownloadTaskCount = MaxConcurrentOperationCount;
+}
+
+- (BOOL)freeDiskSpace {
+    
+    //检查当前空闲存储空间
+    long long freeSize = [PubFunction1_0 freeDiskSpaceInBytes];
+    long long minSize = (long long)0 * 1024 * 1024;
+    if(freeSize <= minSize) {
+        return NO;
+    }
+    return YES;
+}
+
+#pragma mark DownloadTask
+
+- (void)completeOneDownloadTask:(DownloadTaskInfo *)taskInfo {
+    
+    for (DownloadTaskInfo *curDownInfo in self.curDownloadList) {
+        if (taskInfo == curDownInfo) {
+            [self.curDownloadList removeObject:curDownInfo];
+            [self startWaitDownloadTask];
+            break;
+        }
+    }
+    [taskInfo.downloadTaskInfoRecord saveToDB];
+}
+
+- (void)startWaitDownloadTask
+{
+    if(self.curDownloadList.count>=self.maxDownloadTaskCount) {
+        return;
+    }
+    NSInteger count = self.maxDownloadTaskCount - self.curDownloadList.count;
+    while (count>0) {
+        DownloadTaskInfo *curActiveDownload = nil;
+        //查找等待中的任务
+        for (DownloadTaskInfo *downInfo in self.downloadingList) {
+            if (downInfo.status == Download_status_waiting) {
+                curActiveDownload = downInfo;
+                break;
+            }
+        }
+        if (!curActiveDownload) {
+            break;
+        }
+        [self resumeDownloadTaskWithKey:curActiveDownload.downloadKey];
+        count--;
+    }
+}
+
+- (void)downloadingTask:(DownloadTaskInfo *)taskInfo totalBytesExpectedToWrite:(int64_t)totalBytesExpectedToWrite totalBytesWritten:(int64_t)totalBytesWritten {
+    
+    //暂时处理
+    if (taskInfo.resourceType == DownLoadResourceVideoDocumentType) { //二分屏下载， 包含图片
+        totalBytesExpectedToWrite += totalBytesExpectedToWrite*0.05; //(图片大小为视频大小的5%)
+    }
+    taskInfo.fileSize = totalBytesExpectedToWrite;
+    taskInfo.downSize = totalBytesWritten;
+    
+    if(![self freeDiskSpace])
+    {
+        UIAlertView *alertView = [[UIAlertView alloc] initWithTitle:@"温馨提示" message:@"磁盘空间不足，下载失败！" delegate:nil cancelButtonTitle:@"确认" otherButtonTitles:nil, nil];
+        [alertView show];
+        [self pauseAllDownloadTask];
+        
+        NSDictionary *userInfo = [NSDictionary dictionaryWithObject:DownloadMsg_downloadLowStorage forKey:MsgCenter_Key];
+        [[NSNotificationCenter defaultCenter] postNotificationName:Download_msgCenter object:nil userInfo:userInfo];
+    }
+    NSDictionary *userInfo = [NSDictionary dictionaryWithObject:DownloadMsg_downloadIng forKey:MsgCenter_Key];
+    [[NSNotificationCenter defaultCenter] postNotificationName:Download_msgCenter object:nil userInfo:userInfo];
+}
+
+- (void)finishDownloadTask:(DownloadTaskInfo *)taskInfo urlSessionTask:(NSURLSessionTask *)urlSessionTask filePath:(NSString *)filePath error:(NSError *)error {
+    
+    if (taskInfo.downloadTask != urlSessionTask) {
+        return;
+    }
+    //暂时处理
+    long long fileSize = urlSessionTask.countOfBytesExpectedToReceive;
+    if (taskInfo.resourceType == DownLoadResourceVideoDocumentType) { //二分屏下载， 包含图片
+        fileSize += fileSize*0.05; //(图片大小为视频大小的5%)
+    }
+    taskInfo.fileSize = fileSize;
+    taskInfo.downSize = urlSessionTask.countOfBytesReceived;
+    if (error || (!error && taskInfo.fileSize<2000)) {  //404的情况下， 下载成功 大小为168b
+        
+        if (taskInfo.resourceType == DownLoadResourceImageType) {
+            [self refreshGroupTaskInfoWithMember:taskInfo];
+        }
+        
+        //是否为文档
+        if (taskInfo.downloadKey == self.lastDownloadDocumentKey) {
+            if (self.failureDocumentBlock) {
+                self.failureDocumentBlock();
+            }
+            [self cleanDownloadDocumentBlock];
+        }
+        if (error) {
+            NSData *resumeData = [error.userInfo objectForKey:NSURLSessionDownloadTaskResumeData];
+            [taskInfo saveResumeData:resumeData];
+        }else { //404
+            [taskInfo saveResumeData:nil];
+        }
+        
+        taskInfo.status = (taskInfo.status==Download_status_downloading)?Download_status_Error:taskInfo.status;
+        
+        NSDictionary *userInfo = [NSDictionary dictionaryWithObjectsAndKeys:DownloadMsg_downloadFinish, MsgCenter_Key, taskInfo ,DownloadMsg_downloadInfo, nil];
+        [[NSNotificationCenter defaultCenter] postNotificationName:Download_msgCenter object:nil userInfo:userInfo];
+    }else {
+        taskInfo.localPath = filePath;
+        if (taskInfo.resourceType == DownLoadResourceVideoDocumentType) {  //开始下载图片
+            BOOL sucess = [self downloadGroupImageWithParentKey:taskInfo.downloadKey];
+            if (sucess) {
+                return;
+            }
+        }
+        taskInfo.status = Download_status_completed;
+        if (taskInfo.resourceType == DownLoadResourceImageType) {
+            [self refreshGroupTaskInfoWithMember:taskInfo];
+            BOOL sucess = [self downloadGroupImageWithParentKey:taskInfo.script1];
+            if (sucess) {
+                return; //继续下载剩余的图片
+            }else {
+                taskInfo = [self downloadTaskInfoWithKey:taskInfo.script1]; //父亲
+            }
+        }
+        
+        //是否为文档
+        if (taskInfo.downloadKey == self.lastDownloadDocumentKey) {
+            if (self.sucessDocumentBlock) {
+                self.sucessDocumentBlock(@[taskInfo.localPath]);
+            }
+            [self cleanDownloadDocumentBlock];
+        }
+        
+        [self.downloadingList removeObject:taskInfo];
+        [self.finishList addObject:taskInfo];
+        
+        
+        [[NSNotificationCenter defaultCenter] postNotificationName:kDownloadingCountChange object:nil userInfo:nil];
+        NSDictionary *userInfo = [NSDictionary dictionaryWithObjectsAndKeys:DownloadMsg_downloadFinish, MsgCenter_Key, taskInfo ,DownloadMsg_downloadInfo, nil];
+        [[NSNotificationCenter defaultCenter] postNotificationName:Download_msgCenter object:nil userInfo:userInfo];
+    }
+    [self completeOneDownloadTask:taskInfo];
+}
+
+#pragma mark  Group
+
+- (void)refreshGroupTaskInfoWithMember:(DownloadTaskInfo *)member {
+    
+    if (member.status == Download_status_completed) {
+        NSString *key = member.script1;
+        NSMutableArray *downloadIngImageArray = [self.downloadingImageDic objectForKey:key];
+        [downloadIngImageArray removeObject:member];
+        
+        NSMutableArray *finishImageArray = [self.finishImageDic objectForKey:key];
+        if (!finishImageArray) {
+            finishImageArray = [NSMutableArray array];
+            [self.finishImageDic setObject:finishImageArray forKey:key];
+        }
+        [finishImageArray addObject:member];
+        
+        DownloadTaskInfo *downloadInfo = [self downloadTaskInfoWithKey:key];
+        [downloadInfo finishDownloadOneImage:downloadIngImageArray.count+finishImageArray.count];
+        if (downloadIngImageArray.count == 0) { //所有图片下载完成
+            
+            //父亲设为完成
+            downloadInfo.downSize = downloadInfo.fileSize;
+            downloadInfo.status = Download_status_completed;
+        }
+        [downloadInfo.downloadTaskInfoRecord saveToDB];
+    }else {
+        NSString *key = member.script1;
+        DownloadTaskInfo *downloadInfo = [self downloadTaskInfoWithKey:key];
+        //父亲设为失败
+        downloadInfo.status = (downloadInfo.status==Download_status_downloading)?Download_status_Error:downloadInfo.status;
+        [downloadInfo.downloadTaskInfoRecord saveToDB];
+    }
+}
+
+- (BOOL)downloadGroupImageWithParentKey:(NSString *)parentKey {
+    
+    NSArray *imageArray = [self.downloadingImageDic objectForKey:parentKey];
+    if (imageArray.count > 0) {
+        DownloadTaskInfo *imageInfo = [imageArray firstObject];
+        imageInfo.status = Download_status_downloading;
+        [imageInfo.downloadTaskInfoRecord saveToDB];
+        [self createDownloadTaskWithTaskInfo:imageInfo];
+        return YES;
+    }
+    return NO;
+}
+
+@end
+
+#pragma mark - Class DownloadCondition
+@implementation DownloadCondition
+
+- (instancetype)initWithDownloadKey:(NSString *)downloadKey
+                               urls:(NSArray *)urls
+                            script1:(NSString *)script1
+                            script2:(NSString *)script2
+                       downloadType:(DownLoadResourceType)downloadType {
+    
+    self = [super init];
+    if (self) {
+        _downloadKey = downloadKey;
+        _urls = urls;
+        _script1 = script1;
+        _script2 = script2;
+        _downloadType = downloadType;
+    }
+    return self;
+}
+
+- (instancetype)initWithDownloadKey:(NSString *)downloadKey
+                               urls:(NSArray *)urls
+                            script1:(NSString *)script1
+                       downloadType:(DownLoadResourceType)downloadType {
+    return [self initWithDownloadKey:downloadKey urls:urls script1:script1 script2:nil downloadType:downloadType];
+}
+
+- (instancetype)initWithDownloadKey:(NSString *)downloadKey
+                               urls:(NSArray *)urls
+                       downloadType:(DownLoadResourceType)downloadType {
+    
+    return [self initWithDownloadKey:downloadKey urls:urls script1:nil script2:nil downloadType:downloadType];
+}
+
+@end
