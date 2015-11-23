@@ -1,0 +1,78 @@
+//
+//  DownLoadManager+User.h
+//  Download
+//
+//  Created by 王时温 on 11/5/15.
+//  Copyright © 2015 王时温. All rights reserved.
+//
+
+#import "DownLoadManager.h"
+
+@interface DownLoadManager (User)
+
+- (void)addDownloadTaskWithCondition_User:(DownloadCondition *)condition;
+
+- (void)pauseDownloadTaskWithKey_User:(NSString *)downloadKey;
+
+- (void)resumeDownloadTaskWithKey_User:(NSString *)downloadKey;
+
+- (void)deleteDownloadTaskWithKey_User:(NSString *)downloadKey;
+
+- (void)pauseAllDownloadTask_User;
+
+- (void)resumeAllDownloadTask_User;
+
+- (DownloadTaskInfo *)downloadTaskInfoWithKey_User:(NSString *)downloadKey;
+
+/**
+ *  获取下载的文档， 未下载的文档会添加到下载队列中
+ *
+ *  @param condition 下载的条件
+ *  @param sucess    成功后的回调
+ *  @param failure   失败的回调
+ */
+- (void)getDownloadedDocumentWithCondition:(DownloadCondition *)condition
+                                    sucess:(void(^)(NSArray *loacPaths))sucess
+                                   failure:(void(^)())failure;
+
+
+/**
+ *  获取本地下载文件
+ *
+ *  @param downloadKey 下载key
+ *
+ *  @return nil表示不存在， 有值表示本地路径
+ */
+- (NSString *)filelocalPathWithKey_User:(NSString *)downloadKey;
+
+/**
+ *  根据下载key取出原始key
+ *
+ *  @param key 下载key
+ *
+ *  @return 原始的key
+ */
+- (NSString *)originKeyWithDownloadKey:(NSString *)key;
+
+/**
+ *  原始key加userID
+ */
+- (NSString *)downloadKeyWithOriginKey:(NSString *)key;
+
+/**
+ *  获取正在下载NDDownloadInfo数组
+ */
+- (NSArray *)downloadingTaskList_User;
+
+/**
+ *  获取已下载NDDownloadInfo数组
+ */
+- (NSArray *)finishedTaskList_User;
+
+/*
+ 获取已下载大小
+ */
+- (long long)downloadTaskSize_User;
+
+
+@end

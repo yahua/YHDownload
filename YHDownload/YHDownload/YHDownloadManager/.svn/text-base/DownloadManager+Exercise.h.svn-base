@@ -1,0 +1,25 @@
+//
+//  DownloadManager+Exercise.h
+//  YCZZ
+//
+//  Created by wangshiwen on 15/9/8.
+//  Copyright (c) 2015年 com.nd.hy. All rights reserved.
+//
+
+#import "DownLoadManager.h"
+
+@interface DownLoadManager (Exercise)
+
+- (void)addDownloadExerciseTaskWithCondition:(DownloadCondition *)condition;
+
+- (void)pauseDownloadExerciseTaskWithKey:(NSString *)key;
+
+- (void)resumeDownloadExerciseTaskWithKey:(NSString *)key;
+
+- (void)deleteDownloadExerciseTaskWithKey:(NSString *)key;
+
+- (void)finishExerciseTaskWithKey:(NSString *)key fileSize:(NSUInteger)fileSize;
+
+- (void)failureExerciseTaskWithKey:(NSString *)key;
+
+@end

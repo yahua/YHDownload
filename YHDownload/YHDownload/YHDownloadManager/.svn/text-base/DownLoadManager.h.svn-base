@@ -1,0 +1,99 @@
+//
+//  DownLoadManager.h
+//  Download
+//
+//  Created by 王时温 on 10/20/15.
+//  Copyright © 2015 王时温. All rights reserved.
+//
+
+#import <Foundation/Foundation.h>
+#import "DownloadTaskInfo.h"
+
+extern NSString * const kDownloadingCountChange;
+
+#define Download_msgCenter  @"Download_msgCenter"
+#define MsgCenter_Key       @"MsgCenter_Key"
+
+#define DownloadMsg_downloadFinish      @"DownloadFinish"
+#define DownloadMsg_downloadFailed      @"DownloadFailed"
+#define DownloadMsg_downloadAdd         @"AddDownloadTask"
+#define DownloadMsg_downloadLowStorage  @"LowStorage"
+#define DownloadMsg_downloadIng         @"Downloading"
+#define DownloadMsg_downloadDelete      @"downloadDelete"
+
+#define DownloadMsg_downloadInfo        @"NDDownloadInfo"
+
+
+@class DownloadCondition;
+@interface DownLoadManager : NSObject
+
+@property (nonatomic, strong, readonly) NSMutableArray *finishList;
+@property (nonatomic, strong, readonly) NSMutableArray *downloadingList;
+
+//图片组依赖于一个父DownloadTaskInfo
+@property (nonatomic, strong) NSMutableDictionary *downloadingImageDic; //正在下载的图片组,
+@property (nonatomic, strong) NSMutableDictionary *finishImageDic;      //已下载的图片组
+
+//文档下载
+@property (nonatomic, copy) NSString *lastDownloadDocumentKey;
+@property (nonatomic, copy) void(^sucessDocumentBlock)(NSArray *loacPaths);
+@property (nonatomic, copy) void(^failureDocumentBlock)();
+//最大下载数量
+@property (nonatomic, assign) NSInteger maxDownloadTaskCount;
+
++ (instancetype)shareInstance;
+
+/**
+ *  添加组成员的下载任务，
+ */
+- (void)addGroupMemberDownloadTaskWithCondition:(DownloadCondition *)condition parentKey:(NSString *)parentKey;
+
+- (void)addDownloadTaskWithCondition:(DownloadCondition *)condition;
+
+- (void)pauseDownloadTaskWithKey:(NSString *)downloadKey;
+
+- (void)resumeDownloadTaskWithKey:(NSString *)downloadKey;
+
+- (void)deleteDownloadTaskWithKey:(NSString *)downloadKey;
+
+
+- (void)pauseAllDownloadTask;
+
+- (void)resumeAllDownloadTask;
+
+- (DownloadTaskInfo *)downloadTaskInfoWithKey:(NSString *)downloadKey;
+
+
+- (void)setDefaultMaxDownloadCount;
+
+- (void)createDownloadTaskWithTaskInfo:(DownloadTaskInfo *)taskInfo;
+
+@end
+
+
+///下载条件
+@interface DownloadCondition : NSObject
+
+@property (nonatomic, copy) NSArray *urls;
+@property (nonatomic, copy) NSString *downloadKey;
+@property (nonatomic, copy) NSString *script1;
+@property (nonatomic, copy) NSString *script2;
+@property (nonatomic, assign) DownLoadResourceType downloadType;
+
+- (instancetype)initWithDownloadKey:(NSString *)downloadKey
+                               urls:(NSArray *)urls
+                            script1:(NSString *)script1
+                            script2:(NSString *)script2
+                       downloadType:(DownLoadResourceType)downloadType;
+
+- (instancetype)initWithDownloadKey:(NSString *)downloadKey
+                               urls:(NSArray *)urls
+                            script1:(NSString *)script1
+                       downloadType:(DownLoadResourceType)downloadType;
+
+- (instancetype)initWithDownloadKey:(NSString *)downloadKey
+                               urls:(NSArray *)urls
+                       downloadType:(DownLoadResourceType)downloadType;
+
+@end
+

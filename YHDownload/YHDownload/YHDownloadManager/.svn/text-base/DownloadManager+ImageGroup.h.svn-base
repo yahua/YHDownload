@@ -1,0 +1,36 @@
+//
+//  NDDownloadManage+ImageGroup.h
+//  YCZZ
+//
+//  Created by wangshiwen on 15/9/7.
+//  Copyright (c) 2015年 com.nd.hy. All rights reserved.
+//
+
+#import "DownLoadManager.h"
+
+
+@interface DownLoadManager (ImageGroup)
+
+- (void)getGroupImageWithCondition:(DownloadCondition *)condition
+                            sucess:(void(^)(NSArray *loacPaths))sucess
+                           failure:(void(^)())failure;
+
+- (void)addDownloadGroupImageTaskWithCondition:(DownloadCondition *)condition;
+
+- (void)pauseDownloadGroupImageTaskWithKey:(NSString *)downKey;
+
+- (void)resumeDownloadGroupImageTaskWithKey:(NSString *)downKey;
+
+- (void)deleteGroupImageTaskWithKey:(NSString *)downKey;
+
+/**
+ *  组的成员图片
+ *
+ *  @param key //父亲id xxx
+ *
+ *  @return 图片的本地路径+图片的时间节点 :xxx-duration (array) ps:所有下载完成才会返回，否则为nil
+ */
+- (NSArray *)groupImageLocalPathWithKey:(NSString *)key;
+
+@end
+
